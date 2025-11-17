@@ -4,7 +4,7 @@ import path from 'node:path';
 // Set up Nextra with its configuration
 const withNextra = nextra({
   // ... Add Nextra-specific options here
-  unstable_shouldAddLocaleToLinks: false,
+  unstable_shouldAddLocaleToLinks: true,
 });
 
 // Export the final Next.js config with Nextra included
