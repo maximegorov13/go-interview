@@ -15,5 +15,6 @@ export default withNextra({
       'next-mdx-import-source-file': './mdx-components.tsx',
     },
   },
+  output: 'export',
   basePath: '/go-interview',
 });
