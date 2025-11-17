@@ -10,7 +10,7 @@ const withNextra = nextra({
 export default withNextra({
   // ... Add regular Next.js options here
   turbopack: {
-    // root: path.join(import.meta.dirname),
+    root: path.join(import.meta.dirname),
     resolveAlias: {
       'next-mdx-import-source-file': './mdx-components.tsx',
     },
