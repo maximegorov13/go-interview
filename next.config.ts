@@ -16,5 +16,5 @@ export default withNextra({
     },
   },
   output: 'export',
-  basePath: '/go-interview',
+  // basePath: '/go-interview',
 });
