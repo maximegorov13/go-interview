@@ -9,7 +9,7 @@
     "lint": "eslint",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind"
+    "postbuild": "pagefind --site .next/server/app --output-path out/_pagefind"
   },
   "dependencies": {
     "next": "16.0.3",
