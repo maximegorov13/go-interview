@@ -34,7 +34,7 @@ export default async function RootLayout({
         <Layout
           navbar={navbar}
           pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/maximegorov13/go-interview"
+          docsRepositoryBase="https://github.com/maximegorov13/go-interview/tree/main"
           footer={footer}
           // ... Your additional layout options
         >
