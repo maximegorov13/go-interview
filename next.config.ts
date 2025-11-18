@@ -18,6 +18,6 @@ export default withNextra({
   output: 'export',
   basePath: '/go-interview',
   images: {
-    unoptimized: true
-  }
+    unoptimized: true,
+  },
 });
