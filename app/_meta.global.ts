@@ -7,11 +7,9 @@ const GLOBAL: MetaRecord = {
     title: 'Go',
   },
   slices: {
+    title: '',
     items: {
       tasks: '',
-    },
-    theme: {
-      collapsed: true,
     },
   },
   maps: '',

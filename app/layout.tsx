@@ -35,6 +35,9 @@ export default async function RootLayout({
           navbar={navbar}
           pageMap={await getPageMap()}
           docsRepositoryBase="https://github.com/maximegorov13/go-interview/tree/main"
+          sidebar={{
+            defaultMenuCollapseLevel: 1,
+          }}
           footer={footer}
           // ... Your additional layout options
         >
