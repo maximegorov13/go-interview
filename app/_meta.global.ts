@@ -9,7 +9,7 @@ const GLOBAL: MetaRecord = {
   go: {
     display: 'children',
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // @ts-expect-error
     items: {
       advantages: '',
       disadvantages: '',
@@ -35,7 +35,7 @@ const GLOBAL: MetaRecord = {
   tasks: {
     display: 'children',
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // @ts-expect-error
     items: {
       slices: '',
     },
