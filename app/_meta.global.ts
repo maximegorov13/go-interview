@@ -6,13 +6,36 @@ const GLOBAL: MetaRecord = {
     type: 'separator',
     title: 'Go',
   },
-  slices: {
-    title: '',
+  go: {
+    display: 'children',
     items: {
-      tasks: '',
+      advantages: '',
+      disadvantages: '',
+      variables: '',
+      'data-types': '',
+      'composite-data-types': '',
+      'areas-of-visibility': '',
+      strings: '',
+      loops: '',
+      pointers: '',
+      structures: '',
+      methods: '',
+      interfaces: '',
+      context: '',
+      'array-slice': '',
+      maps: '',
     },
   },
-  maps: '',
+  separator_2: {
+    type: 'separator',
+    title: 'Задачи',
+  },
+  tasks: {
+    display: 'children',
+    items: {
+      slices: '',
+    },
+  },
 };
 
 export default GLOBAL;
