@@ -8,6 +8,8 @@ const GLOBAL: MetaRecord = {
   },
   go: {
     display: 'children',
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     items: {
       advantages: '',
       disadvantages: '',
@@ -32,6 +34,8 @@ const GLOBAL: MetaRecord = {
   },
   tasks: {
     display: 'children',
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     items: {
       slices: '',
     },
