@@ -28,12 +28,24 @@ const GLOBAL: MetaRecord = {
       maps: '',
       defer: '',
       error: '',
+    },
+  },
+  separator_2: {
+    type: 'separator',
+    title: 'Продвинутый Go',
+  },
+  'advanced-go': {
+    title: 'Продвинутый Go',
+    display: 'children',
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    items: {
       concurrency: '',
       'runtime-scheduler': '',
       'garbage-collector': '',
     },
   },
-  separator_2: {
+  separator_3: {
     type: 'separator',
     title: 'Базы данных',
   },
@@ -46,7 +58,7 @@ const GLOBAL: MetaRecord = {
       'sql-nosql': '',
     },
   },
-  separator_3: {
+  separator_4: {
     type: 'separator',
     title: 'Общее',
   },
@@ -59,7 +71,7 @@ const GLOBAL: MetaRecord = {
       networks: '',
     },
   },
-  separator_4: {
+  separator_5: {
     type: 'separator',
     title: 'Задачи',
   },
