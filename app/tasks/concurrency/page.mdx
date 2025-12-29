@@ -1,1 +1,26 @@
 # Задачи на конкурентность
+
+## Задача 1
+
+Что выведет код? Как исправить?
+
+```go showLineNumbers filename="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	for i := 0; i < 100; i++ {
+		go func() {
+			fmt.Println(i)
+		}()
+	}
+}
+```
+
+<details>
+  <summary>Ответ</summary>
+
+Либо ничего не выводит, либо не все числа.
+
+</details>
