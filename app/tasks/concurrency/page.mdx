@@ -19,8 +19,167 @@ func main() {
 ```
 
 <details>
-  <summary>Ответ</summary>
+  <summary>**Ответ**</summary>
 
-Либо ничего не выводит, либо не все числа.
+Непредсказуемое поведение. Либо ничего не выводит, либо не все числа.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+func main() {
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fmt.Println(i)
+		}()
+	}
+
+	wg.Wait()
+}
+```
+
+</details>
+
+## Задача 2
+
+Что выведет код? Как исправить?
+
+```go showLineNumbers filename="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	counter := 0
+	for i := 0; i < 100; i++ {
+		go func() {
+			counter++
+		}()
+	}
+
+	fmt.Println(counter)
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+Не выведет число 100. Может быть даже 0.
+
+**Вариант 1**
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"sync"
+	"sync/atomic"
+)
+
+func main() {
+	var counter int64
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			atomic.AddInt64(&counter, 1)
+		}()
+	}
+
+	wg.Wait()
+
+	fmt.Println(counter)
+}
+```
+
+**Вариант 2**
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+func main() {
+	counter := 0
+	wg := sync.WaitGroup{}
+	mu := sync.Mutex{}
+
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			mu.Lock()
+			defer mu.Unlock()
+			counter++
+		}()
+	}
+
+	wg.Wait()
+
+	fmt.Println(counter)
+}
+```
+
+</details>
+
+## Задача 3
+
+Что выведет код?
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"runtime"
+	"sync"
+	"time"
+)
+
+func worker(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	time.Sleep(1 * time.Millisecond)
+}
+
+func main() {
+	runtime.GOMAXPROCS(1)
+
+	MAX_TASKS := 10_000
+
+	wg := &sync.WaitGroup{}
+	wg.Add(MAX_TASKS)
+
+	start := time.Now()
+	for range MAX_TASKS {
+		go worker(wg)
+	}
+
+	wg.Wait()
+	fmt.Println(time.Since(start))
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+Программа завершится примерно через чуть больше 1 миллисекунды (зависит от системы), потому что все 10 000 горутин одновременно засыпают на 1 мс, и Go-планировщик эффективно управляет ими даже на одном ядре.
+time.Sleep — это блокирующая, но не CPU-нагружающая операция, поэтому она не требует отдельного потока и освобождает его для других горутин.
 
 </details>
