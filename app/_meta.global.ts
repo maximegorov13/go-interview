@@ -49,6 +49,7 @@ const GLOBAL: MetaRecord = {
     items: {
       slices: '',
       concurrency: '',
+      channels: '',
     },
   },
 };
