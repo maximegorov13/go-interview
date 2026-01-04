@@ -1,0 +1,459 @@
+# Задачи на паттерны конкурентности
+
+## Задача 1
+
+Реализовать функцию.
+
+```go showLineNumbers filename="main.go"
+package main
+
+func fanin(chans ...<-chan int) <-chan int {
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+```go showLineNumbers filename="main.go"
+package main
+
+import "sync"
+
+func fanin(chans ...<-chan int) <-chan int {
+	results := make(chan int)
+	wg := sync.WaitGroup{}
+
+	for _, ch := range chans {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for val := range ch {
+				results <- val
+			}
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	return results
+}
+```
+
+</details>
+
+## Задача 2
+
+Что выведет код?
+
+Нужно распараллелить запросы.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+)
+
+type User struct {
+	Name string
+}
+
+func fetch(_ context.Context, user User) (string, error) {
+	time.Sleep(time.Millisecond * 10)
+
+	return user.Name, nil
+}
+
+func process(ctx context.Context, users []User) (map[string]int64, error) {
+	names := make(map[string]int64, 0)
+
+	for _, u := range users {
+		name, err := fetch(ctx, u)
+		if err != nil {
+		}
+
+		names[name] = names[name] + 1
+	}
+
+	return names, nil
+}
+
+func main() {
+	names := []User{
+		{"Ann"},
+		{"Bob"},
+		{"Cindy"},
+		{"Bob"},
+	}
+
+	ctx := context.Background()
+
+	start := time.Now()
+	res, err := process(ctx, names)
+	if err != nil {
+		fmt.Println("an error occurred:", err.Error())
+	}
+	fmt.Println("time:", time.Since(start))
+	fmt.Println(res)
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+Время выполнения примерно чуть больше 40мс и map[Ann:1 Bob:2 Cindy:1]
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"time"
+
+	"golang.org/x/sync/errgroup"
+)
+
+type User struct {
+	Name string
+}
+
+func fetch(ctx context.Context, user User) (string, error) {
+	ch := make(chan any)
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		close(ch)
+	}()
+
+	select {
+	case <-ch:
+		return user.Name, nil
+	case <-ctx.Done():
+		return "", errors.New("context canceled")
+	}
+}
+
+func process(ctx context.Context, users []User) (map[string]int64, error) {
+	names := make(map[string]int64, 0)
+	mu := sync.Mutex{}
+
+	egroup, ectx := errgroup.WithContext(ctx)
+	egroup.SetLimit(10) // Опционально, если нужно ограничить количество горутин
+
+	for _, u := range users {
+		egroup.Go(func() error {
+			name, err := fetch(ectx, u)
+			if err != nil {
+				return err
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			names[name] = names[name] + 1
+
+			return nil
+		})
+	}
+
+	if err := egroup.Wait(); err != nil {
+		return nil, err
+	}
+
+	return names, nil
+}
+
+func main() {
+	names := []User{
+		{"Ann"},
+		{"Bob"},
+		{"Cindy"},
+		{"Bob"},
+	}
+
+	ctx := context.Background()
+
+	start := time.Now()
+	res, err := process(ctx, names)
+	if err != nil {
+		fmt.Println("an error occurred:", err.Error())
+	}
+	fmt.Println("time:", time.Since(start))
+	fmt.Println(res)
+}
+```
+
+</details>
+
+## Задача 3
+
+Реализовать Rate Limiter.
+
+Условия могут быть разные:
+
+- Ограничение кол-ва коннектов
+- Ограничение кол-ва горутин
+- Ограничение RPS
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"time"
+)
+
+type Request struct {
+	Payload string
+}
+
+type client struct {
+}
+
+func (c client) SendRequest(ctx context.Context, request Request) error {
+	time.Sleep(100 * time.Millisecond)
+	fmt.Println("sending request", request.Payload)
+	return nil
+}
+
+func (c client) WithLimiter(ctx context.Context, requests []Request) {
+}
+
+func main() {
+	ctx := context.Background()
+	c := client{}
+	requests := make([]Request, 1000)
+	for i := 0; i < 1000; i++ {
+		requests[i] = Request{
+			Payload: strconv.Itoa(i),
+		}
+	}
+	c.WithLimiter(ctx, requests)
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+**Ограничение кол-ва коннектов**
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"sync"
+	"time"
+)
+
+type Request struct {
+	Payload string
+}
+
+type client struct {
+}
+
+func (c client) SendRequest(ctx context.Context, request Request) error {
+	time.Sleep(100 * time.Millisecond)
+	fmt.Println("sending request", request.Payload)
+	return nil
+}
+
+var maxConnects = 10
+
+func (c client) WithLimiter(ctx context.Context, ch chan Request) {
+	wg := sync.WaitGroup{}
+	wg.Add(maxConnects)
+	for range maxConnects {
+		go func() {
+			defer wg.Done()
+
+			for req := range ch {
+				c.SendRequest(ctx, req)
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+func main() {
+	ctx := context.Background()
+	c := client{}
+	requests := make([]Request, 1000)
+	for i := 0; i < 1000; i++ {
+		requests[i] = Request{
+			Payload: strconv.Itoa(i),
+		}
+	}
+	c.WithLimiter(ctx, generate(requests))
+}
+
+func generate(reqs []Request) chan Request {
+	ch := make(chan Request)
+
+	go func() {
+		for _, v := range reqs {
+			ch <- v
+		}
+		close(ch)
+	}()
+
+	return ch
+}
+```
+
+**Ограничение кол-ва горутин**
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"time"
+)
+
+type Request struct {
+	Payload string
+}
+
+type client struct {
+}
+
+func (c client) SendRequest(ctx context.Context, request Request) error {
+	time.Sleep(100 * time.Millisecond)
+	fmt.Println("sending request", request.Payload)
+	return nil
+}
+
+var maxGoroutines = 100
+
+func (c client) WithLimiter(ctx context.Context, requests []Request) {
+	tokens := make(chan struct{}, maxGoroutines)
+
+	go func() {
+		for range maxGoroutines {
+			tokens <- struct{}{}
+		}
+	}()
+
+	for _, req := range requests {
+		<-tokens
+		go func() {
+			defer func() {
+				tokens <- struct{}{}
+			}()
+
+			c.SendRequest(ctx, req)
+		}()
+	}
+
+	for range maxGoroutines {
+		<-tokens
+	}
+}
+
+func main() {
+	ctx := context.Background()
+	c := client{}
+	requests := make([]Request, 1000)
+	for i := 0; i < 1000; i++ {
+		requests[i] = Request{
+			Payload: strconv.Itoa(i),
+		}
+	}
+	c.WithLimiter(ctx, requests)
+}
+```
+
+**Ограничение RPS**
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"sync"
+	"time"
+)
+
+type Request struct {
+	Payload string
+}
+
+type client struct {
+}
+
+func (c client) SendRequest(ctx context.Context, request Request) error {
+	time.Sleep(100 * time.Millisecond)
+	fmt.Println("sending request", request.Payload)
+	return nil
+}
+
+var rps = 100
+var burst = 10
+
+func (c client) WithLimiter(ctx context.Context, requests []Request) {
+	ticker := time.NewTicker(time.Second / time.Duration(rps))
+	tickets := make(chan struct{}, burst)
+
+	wg := sync.WaitGroup{}
+
+	go func() {
+		for range burst {
+			tickets <- struct{}{}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				tickets <- struct{}{}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	wg.Add(len(requests))
+	for _, request := range requests {
+		<-tickets
+		go func() {
+			defer wg.Done()
+
+			c.SendRequest(ctx, request)
+		}()
+	}
+	wg.Wait()
+}
+
+func main() {
+	ctx := context.Background()
+	c := client{}
+	requests := make([]Request, 1000)
+	for i := 0; i < 1000; i++ {
+		requests[i] = Request{
+			Payload: strconv.Itoa(i),
+		}
+	}
+	c.WithLimiter(ctx, requests)
+}
+```
+
+</details>

@@ -50,6 +50,7 @@ const GLOBAL: MetaRecord = {
       slices: '',
       concurrency: '',
       channels: '',
+      'concurrency-patterns': '',
     },
   },
 };

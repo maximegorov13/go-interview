@@ -89,3 +89,248 @@ func main() {
 ```
 
 </details>
+
+## Задача 3
+
+Что выведет код?
+
+Как исправить?
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+func spawnMessages(n int) chan string {
+	ch := make(chan string, 1)
+
+	for i := 0; i < n; i++ {
+		ch <- fmt.Sprintf("msg %d", i+1)
+	}
+
+	return ch
+}
+
+func main() {
+	n := 10
+
+	for msg := range spawnMessages(n) {
+		fmt.Println("received:", msg)
+	}
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+Возникнет deadlock.
+
+**Вариант 1**
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+func spawnMessages(n int) chan string {
+	ch := make(chan string, 1)
+
+	go func() {
+		for i := 0; i < n; i++ {
+			ch <- fmt.Sprintf("msg %d", i+1)
+		}
+		close(ch)
+	}()
+
+	return ch
+}
+
+func main() {
+	n := 10
+
+	for msg := range spawnMessages(n) {
+		fmt.Println("received:", msg)
+	}
+}
+```
+
+**Вариант 2**
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+func spawnMessages(n int) chan string {
+	ch := make(chan string, n)
+
+	for i := 0; i < n; i++ {
+		ch <- fmt.Sprintf("msg %d", i+1)
+	}
+	close(ch)
+
+	return ch
+}
+
+func main() {
+	n := 10
+
+	for msg := range spawnMessages(n) {
+		fmt.Println("received:", msg)
+	}
+}
+```
+
+</details>
+
+## Задача 4
+
+Что выведет код?
+
+```go showLineNumbers filename="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	ch := make(chan int, 1)
+
+	for i := 0; i <= 5; i++ {
+		select {
+		case val := <-ch:
+			fmt.Println(val)
+		case ch <- i:
+		}
+	}
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+```shell
+0
+2
+4
+```
+
+</details>
+
+## Задача 5
+
+Реализовать функцию `predictableFunc`, чтобы ограничить по времени выполнение функции `unpredictableFunc`, не изменяя ее код.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"math/rand"
+	"time"
+)
+
+func unpredictableFunc() int {
+	n := rand.Intn(40)
+	time.Sleep(time.Duration(n) * time.Second)
+	return n
+}
+
+func predictableFunc() int {}
+
+func main() {
+	_ = predictableFunc()
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"errors"
+	"math/rand"
+	"time"
+)
+
+func unpredictableFunc() int {
+	n := rand.Intn(40)
+	time.Sleep(time.Duration(n) * time.Second)
+	return n
+}
+
+func predictableFunc(ctx context.Context) (int, error) {
+	ch := make(chan struct{})
+	var result int
+
+	var cancel context.CancelFunc
+	if _, ok := ctx.Deadline(); !ok {
+		ctx, cancel = context.WithTimeout(ctx, time.Second*5)
+		defer cancel()
+	}
+
+	go func() {
+		result = unpredictableFunc()
+		close(ch)
+	}()
+
+	select {
+	case <-ch:
+		return result, nil
+	case <-ctx.Done():
+		return 0, errors.New("timed out")
+	}
+}
+
+func main() {
+	_, _ = predictableFunc(context.Background())
+}
+```
+
+</details>
+
+## Задача 6
+
+Что выведет код?
+
+```go showLineNumbers filename="main.go"
+package main
+
+import "fmt"
+
+type c chan c
+
+func main() {
+	var c = make(c, 1)
+	c <- c
+	for i := 0; i < 1000; i++ {
+		select {
+		case <-c:
+		case <-c:
+			c <- c
+		default:
+			fmt.Println(i)
+			return
+		}
+	}
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+Программа выведет какое-то целое число (от 0 до 999) и завершится. Конкретное
+значение непредсказуемо из-за случайного выбора между готовыми case'ами в
+select. Как только будет выбран первый case (без записи обратно), канал
+опустеет, и на следующей итерации сработает default.
+
+Если конкретнее: статистически чаще всего это будут небольшие числа (1-5), так как вероятность выбора case 1 = 50% на каждой итерации.
+
+</details>
