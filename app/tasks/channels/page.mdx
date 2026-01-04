@@ -37,3 +37,55 @@ func main() {
 Код выведет какое-то количество времени, но гораздо меньше двух секунд.
 
 </details>
+
+## Задача 2
+
+Что выведет код? Как исправить?
+
+```go showLineNumbers filename="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	ch := make(chan int)
+
+	go func() {
+		for i := 0; i < 100; i++ {
+			ch <- i
+		}
+	}()
+
+	for n := range ch {
+		fmt.Println(n)
+	}
+}
+```
+
+<details>
+  <summary>**Ответ**</summary>
+
+Возникнет deadlock.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	ch := make(chan int)
+
+	go func() {
+		for i := 0; i < 100; i++ {
+			ch <- i
+		}
+		close(ch)
+	}()
+
+	for n := range ch {
+		fmt.Println(n)
+	}
+}
+```
+
+</details>
