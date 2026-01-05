@@ -51,6 +51,7 @@ const GLOBAL: MetaRecord = {
       concurrency: '',
       channels: '',
       'concurrency-patterns': '',
+      'async-cache': '',
     },
   },
 };

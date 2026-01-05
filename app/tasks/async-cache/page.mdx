@@ -1,0 +1,71 @@
+# Асинхронный кэш
+
+## Задача 1
+
+Необходимо реализовать in-memory кэш, который реализует операции добавления, поиска и удаления элемента за минимальное время.
+Кэш должен быть конкурентно-безопасным, пригодным для использования в многопоточной среде.
+
+<details>
+  <summary>**Ответ**</summary>
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"errors"
+	"sync"
+)
+
+var ErrNotFound = errors.New("key not found")
+
+type Cache struct {
+	storage map[string]string
+	mu      *sync.RWMutex
+}
+
+type ICache interface {
+	Get(context.Context, string) (string, error)
+	Set(context.Context, string, string) error
+	Del(context.Context, string) error
+}
+
+func New() *Cache {
+	return &Cache{
+		storage: make(map[string]string),
+		mu:      &sync.RWMutex{},
+	}
+}
+
+func (c *Cache) Get(_ context.Context, key string) (string, error) {
+	c.mu.RLock()
+	val, ok := c.storage[key]
+	c.mu.RUnlock()
+
+	if !ok {
+		return "", ErrNotFound
+	}
+
+	return val, nil
+}
+
+func (c *Cache) Set(_ context.Context, key string, value string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.storage[key] = value
+
+	return nil
+}
+
+func (c *Cache) Del(_ context.Context, key string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.storage, key)
+
+	return nil
+}
+```
+
+</details>
