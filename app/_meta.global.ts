@@ -56,8 +56,11 @@ const GLOBAL: MetaRecord = {
     // @ts-expect-error
     items: {
       'sql-nosql': '',
+      sql: '',
+      subqueries: '',
       indices: '',
       transactions: '',
+      replication: '',
     },
   },
   separator_4: {
