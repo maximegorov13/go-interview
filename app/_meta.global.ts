@@ -36,6 +36,11 @@ const GLOBAL: MetaRecord = {
     title: 'Базы данных',
     items: {
       'sql-nosql': '',
+      sql: '',
+      subqueries: '',
+      indices: '',
+      transactions: '',
+      replication: '',
     },
   },
   common: {

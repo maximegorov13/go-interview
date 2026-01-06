@@ -1,0 +1,219 @@
+# SQL в PostgreSQL
+
+PostgreSQL — мощная **открытая реляционная СУБД**, полностью поддерживающая **SQL-стандарт** и расширяющая его собственными возможностями.
+
+---
+
+## Введение
+
+PostgreSQL — это объектно-реляционная СУБД, которая поддерживает **SQL-92, SQL-99, SQL-2003, SQL-2008, SQL-2011 и другие стандарты**, а также **расширения**, такие как JSON, массивы, полнотекстовый поиск, географические данные и многое другое.
+
+---
+
+## Категории команд SQL в PostgreSQL
+
+### 1. DDL (Data Definition Language)
+
+| Команда           | Описание                        |
+| ----------------- | ------------------------------- |
+| `CREATE TABLE`    | Создание таблицы                |
+| `ALTER TABLE`     | Изменение структуры таблицы     |
+| `DROP TABLE`      | Удаление таблицы                |
+| `CREATE INDEX`    | Создание индекса                |
+| `CREATE DATABASE` | Создание БД                     |
+| `CREATE SCHEMA`   | Создание схемы                  |
+| `CREATE TYPE`     | Создание пользовательского типа |
+| `CREATE SEQUENCE` | Создание последовательности     |
+
+**Пример:**
+
+````sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);```
+
+````
+
+### 2. DML (Data Manipulation Language)
+
+| Команда  | Описание          |
+| -------- | ----------------- |
+| `SELECT` | Выборка данных    |
+| `INSERT` | Вставка данных    |
+| `UPDATE` | Обновление данных |
+| `DELETE` | Удаление данных   |
+
+**Пример:**
+
+```sql
+INSERT INTO users (name, email) VALUES ('Иван', 'ivan@example.com');
+SELECT * FROM users WHERE email LIKE '%@example.com';
+```
+
+### 3. DCL (Data Control Language)
+
+| Команда  | Описание            |
+| -------- | ------------------- |
+| `GRANT`  | Предоставление прав |
+| `REVOKE` | Отзыв прав          |
+
+**Пример:**
+
+```sql
+GRANT SELECT, INSERT ON users TO some_user;
+```
+
+### 4. TCL (Transaction Control Language)
+
+| Команда                       | Описание            |
+| ----------------------------- | ------------------- |
+| `BEGIN` / `START TRANSACTION` | Начало транзакции   |
+| `COMMIT`                      | Фиксация транзакции |
+| `ROLLBACK`                    | Откат транзакции    |
+| `SAVEPOINT`                   | Точка сохранения    |
+
+**Пример:**
+
+```sql
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+COMMIT;
+```
+
+## Особенности PostgreSQL
+
+### 1. Типы данных
+
+- `INTEGER`, `BIGINT`, `SERIAL`, `BIGSERIAL`
+- `VARCHAR`, `TEXT`, `CHAR`
+- `BOOLEAN`, `DATE`, `TIMESTAMP`, `TIME`
+- `UUID`, `JSON`, `JSONB`
+- `ARRAY`, `HSTORE`, `GEOMETRY`, `INET`, `CIDR`
+
+### 2. JSON и JSONB
+
+PostgreSQL поддерживает хранение и индексацию JSON-данных:
+
+```sql
+CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    metadata JSONB
+);
+
+SELECT * FROM posts WHERE metadata @> '{"author": "Иван"}';
+```
+
+### 3. Массивы
+
+```sql
+CREATE TABLE tags (
+    id SERIAL PRIMARY KEY,
+    tags_list TEXT[]
+);
+
+INSERT INTO tags (tags_list) VALUES (ARRAY['red', 'green', 'blue']);
+```
+
+4. Пользовательские типы
+
+```sql
+CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+
+CREATE TABLE persons (
+    name TEXT,
+    current_mood mood
+);
+```
+
+## JOIN-ы
+
+| Тип JOIN          | Описание                     |
+| ----------------- | ---------------------------- |
+| `INNER JOIN`      | Совпадающие строки           |
+| `LEFT JOIN`       | Все строки из левой таблицы  |
+| `RIGHT JOIN`      | Все строки из правой таблицы |
+| `FULL OUTER JOIN` | Все строки из обеих таблиц   |
+| `CROSS JOIN`      | Декартово произведение       |
+
+## Агрегатные функции
+
+| Функция                           | Описание           |
+| --------------------------------- | ------------------ |
+| `COUNT()`                         | Количество строк   |
+| `SUM()`                           | Сумма              |
+| `AVG()`                           | Среднее            |
+| `MIN()`, `MAX()`                  | Минимум и максимум |
+| `STRING_AGG()`                    | Объединение строк  |
+| `JSON_AGG()`, `JSON_OBJECT_AGG()` | Агрегация в JSON   |
+
+## Продвинутые возможности
+
+### 1. CTE (Common Table Expressions)
+
+```sql
+WITH recent_users AS (
+    SELECT * FROM users WHERE created_at > '2025-01-01'
+)
+SELECT * FROM recent_users;
+```
+
+### 2. Оконные функции
+
+```sql
+SELECT name, salary,
+       ROW_NUMBER() OVER (ORDER BY salary DESC) AS rank
+FROM employees;
+```
+
+### 3. PL/pgSQL (процедурный язык)
+
+```sql
+CREATE OR REPLACE FUNCTION add_user(name TEXT, email TEXT)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO users (name, email) VALUES (add_user.name, add_user.email);
+END;
+$$ LANGUAGE plpgsql;
+```
+
+## Индексы
+
+| Тип индекса | Описание                                 |
+| ----------- | ---------------------------------------- |
+| `B-tree`    | По умолчанию, для равенства и сортировки |
+| `GIN`       | Для JSONB, массивов, полнотекста         |
+| `GiST`      | Для геометрии, текстового поиска         |
+| `BRIN`      | Для больших таблиц с однородными данными |
+| `Hash`      | Для точного совпадения (в новых версиях) |
+
+**Пример:**
+
+```sql
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_metadata_gin ON users USING GIN(metadata);
+```
+
+## Полезные команды
+
+| Команда         | Описание                               |
+| --------------- | -------------------------------------- |
+| `\dt`           | Показать таблицы (в psql)              |
+| `\d table_name` | Информация о структуре таблицы         |
+| `\du`           | Показать пользователей                 |
+| `EXPLAIN QUERY` | План выполнения запроса                |
+| `VACUUM`        | Очистка "мертвых" строк                |
+| `ANALYZE`       | Обновление статистики для планировщика |
+
+## Популярные расширения
+
+| Расширение  | Назначение                       |
+| ----------- | -------------------------------- |
+| `uuid-ossp` | Генерация UUID                   |
+| `pgcrypto`  | Криптографические функции        |
+| `pg_trgm`   | Триграммы, текстовый поиск       |
+| `hstore`    | Хранение пар ключ-значение       |
+| `postgis`   | Работа с географическими данными |
