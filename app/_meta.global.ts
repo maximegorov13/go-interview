@@ -30,23 +30,7 @@ const GLOBAL: MetaRecord = {
       concurrency: '',
       'runtime-scheduler': '',
       'garbage-collector': '',
-      'concurrency-patterns': {
-        title: 'Паттерны конкурентности',
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        items: {
-          'future-promise': '',
-          generator: '',
-          pipeline: '',
-          'fan-in-fan-out': '',
-          semaphore: '',
-          'worker-pool': '',
-          'goroutine-error-handling': '',
-          'producer-consumer': '',
-          errgroup: '',
-          'rate-limiting': '',
-        },
-      },
+      'concurrency-patterns': '',
     },
   },
   db: {

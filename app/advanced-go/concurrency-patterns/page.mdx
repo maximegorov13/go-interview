@@ -1,0 +1,508 @@
+# Паттерны конкурентности
+
+## errgroup
+
+Для запуска группы задач с общей отменой при первой ошибке.
+
+errgroup.WithContext отменяет контекст при любой ошибке.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"golang.org/x/sync/errgroup"
+)
+
+// Пример: errgroup для запуска задач с общей отменой при ошибке.
+// Идея: первая ошибка отменяет контекст всей группы.
+func main() {
+	ctx := context.Background()
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		time.Sleep(20 * time.Millisecond)
+		return nil
+	})
+
+	g.Go(func() error {
+		time.Sleep(30 * time.Millisecond)
+		return errors.New("boom")
+	})
+
+	g.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(80 * time.Millisecond):
+			return nil
+		}
+	})
+
+	if err := g.Wait(); err != nil {
+		fmt.Println("error:", err)
+	}
+}
+```
+
+## Fan-In / Fan-Out
+
+Fan-out распараллеливает работу, fan-in собирает результаты обратно в один поток.
+
+Мы распределяем вход по нескольким воркерам (fan-out), затем объединяем их выходы (fan-in).
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+// Пример: Fan-out + Fan-in.
+// Идея: fan-out распределяет работу по нескольким воркерам, fan-in собирает результат.
+func generator(nums ...int) <-chan int {
+	out := make(chan int)
+	go func() {
+		for _, n := range nums {
+			out <- n
+		}
+		close(out)
+	}()
+	return out
+}
+
+func fanOut(in <-chan int, workers int) []<-chan int {
+	outs := make([]<-chan int, 0, workers)
+	for i := 0; i < workers; i++ {
+		out := make(chan int)
+		outs = append(outs, out)
+		go func(ch chan int) {
+			for n := range in {
+				ch <- n * n
+			}
+			close(ch)
+		}(out)
+	}
+	return outs
+}
+
+func fanIn(chans ...<-chan int) <-chan int {
+	out := make(chan int)
+	var wg sync.WaitGroup
+
+	wg.Add(len(chans))
+	for _, ch := range chans {
+		go func(c <-chan int) {
+			defer wg.Done()
+			for v := range c {
+				out <- v
+			}
+		}(ch)
+	}
+
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+
+	return out
+}
+
+func main() {
+	source := generator(1, 2, 3, 4, 5)
+	workers := fanOut(source, 3)
+	merged := fanIn(workers...)
+
+	for v := range merged {
+		fmt.Println(v)
+	}
+}
+```
+
+## Future / Promise
+
+Для запуска долгой операции в фоне, чтобы не блокировать основной поток, и получения результата позже.
+
+Мы создаем Future, который содержит канал результата. Фоновая горутина выполняет работу и кладет результат/ошибку, а Await извлекает его, когда он нужен.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+	"time"
+)
+
+type Result struct {
+	Value int
+	Err   error
+}
+
+type Future struct {
+	result chan Result
+}
+
+// Пример: Future/Promise.
+// Идея: запускаем вычисление в фоне и получаем результат позже.
+func AsyncSquare(n int) Future {
+	f := Future{result: make(chan Result, 1)}
+	go func() {
+		defer close(f.result)
+		time.Sleep(40 * time.Millisecond)
+		if n < 0 {
+			f.result <- Result{Err: errors.New("negative input")}
+			return
+		}
+		f.result <- Result{Value: n * n}
+	}()
+	return f
+}
+
+func (f Future) Await() Result {
+	return <-f.result
+}
+
+func main() {
+	future := AsyncSquare(7)
+
+	// Пока результат готовится, можно делать другую работу.
+	fmt.Println("doing other work")
+	res := future.Await()
+
+	if res.Err != nil {
+		fmt.Println("error:", res.Err)
+		return
+	}
+	fmt.Println("result:", res.Value)
+}
+```
+
+## Generator
+
+Для создания потока данных по мере потребления, без хранения всего набора в памяти.
+
+Генератор запускается в горутине и отправляет значения в канал, закрывая его по завершении.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+// Пример: Generator.
+// Идея: горутина генерирует поток данных и пишет его в канал.
+func generator(from, to int) <-chan int {
+	out := make(chan int)
+	go func() {
+		for i := from; i <= to; i++ {
+			out <- i
+		}
+		close(out)
+	}()
+	return out
+}
+
+func main() {
+	for v := range generator(1, 5) {
+		fmt.Println("got", v)
+	}
+}
+```
+
+## Обработка ошибок в горутинах
+
+Для безопасной передачи ошибок из горутин, которые не могут возвращать значение напрямую.
+
+Ошибки отправляются в отдельный канал и централизованно обрабатываются.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+	"sync"
+)
+
+// Пример: обработка ошибок в горутинах через канал.
+// Идея: горутины не могут возвращать ошибку напрямую, поэтому шлем ее в errCh.
+func worker(id int, in <-chan int, errCh chan<- error, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for n := range in {
+		if n < 0 {
+			errCh <- fmt.Errorf("worker %d: %w", id, errors.New("negative input"))
+			return
+		}
+		_ = n * n
+	}
+}
+
+func main() {
+	inputs := []int{2, 4, -1, 3}
+	jobs := make(chan int)
+	errCh := make(chan error, 2)
+
+	var wg sync.WaitGroup
+	for i := 1; i <= 2; i++ {
+		wg.Add(1)
+		go worker(i, jobs, errCh, &wg)
+	}
+
+	go func() {
+		for _, v := range inputs {
+			jobs <- v
+		}
+		close(jobs)
+	}()
+
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	for err := range errCh {
+		fmt.Println("error:", err)
+	}
+}
+```
+
+## Pipeline
+
+Для разбиения обработки на этапы и параллельной обработки разных элементов на разных стадиях.
+
+Каждая стадия читает из входного канала и пишет в выходной, формируя конвейер.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+// Пример: Pipeline.
+// Идея: каждая стадия читает из входного канала и пишет в выходной.
+func gen(nums ...int) <-chan int {
+	out := make(chan int)
+	go func() {
+		for _, n := range nums {
+			out <- n
+		}
+		close(out)
+	}()
+	return out
+}
+
+func square(in <-chan int) <-chan int {
+	out := make(chan int)
+	go func() {
+		for n := range in {
+			out <- n * n
+		}
+		close(out)
+	}()
+	return out
+}
+
+func sum(in <-chan int) <-chan int {
+	out := make(chan int)
+	go func() {
+		total := 0
+		for n := range in {
+			total += n
+		}
+		out <- total
+		close(out)
+	}()
+	return out
+}
+
+func main() {
+	stream := gen(1, 2, 3, 4)
+	squares := square(stream)
+	total := sum(squares)
+
+	fmt.Println(<-total)
+}
+```
+
+## Producer / Consumer
+
+Для разделения производства и потребления данных с буферизацией и асинхронной обработкой.
+
+Производитель пишет в канал, потребитель читает и обрабатывает.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+// Пример: producer-consumer через канал.
+// Идея: производитель отправляет задачи, потребитель обрабатывает по мере поступления.
+func producer(out chan<- int) {
+	defer close(out)
+	for i := 1; i <= 5; i++ {
+		out <- i
+	}
+}
+
+func consumer(in <-chan int) {
+	for v := range in {
+		time.Sleep(20 * time.Millisecond)
+		fmt.Println("processed", v)
+	}
+}
+
+func main() {
+	jobs := make(chan int)
+
+	go producer(jobs)
+	consumer(jobs)
+}
+```
+
+## Rate Limiting
+
+Для ограничения частоты обработки событий.
+
+Ticker задает минимальный интервал между обработками.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+// Пример: rate limiting через time.Ticker.
+// Идея: обрабатываем элементы не чаще заданного интервала.
+func main() {
+	inputs := []string{"a", "b", "c", "d", "e"}
+	ticker := time.NewTicker(40 * time.Millisecond)
+	defer ticker.Stop()
+
+	for _, v := range inputs {
+		<-ticker.C
+		fmt.Println("processed", v)
+	}
+}
+```
+
+## Semaphore
+
+Для ограничения числа одновременно выполняемых задач, чтобы не перегружать CPU/IO.
+
+Используем буферизированный канал как счетчик: захват ресурса — запись, освобождение — чтение.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+// Пример: Semaphore через buffered channel.
+// Идея: буфер канала задает максимальное число одновременных задач.
+func main() {
+	const maxConcurrent = 2
+	sem := make(chan struct{}, maxConcurrent)
+
+	var wg sync.WaitGroup
+	for i := 1; i <= 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			sem <- struct{}{}
+			fmt.Printf("start %d\n", id)
+			time.Sleep(50 * time.Millisecond)
+			fmt.Printf("end %d\n", id)
+			<-sem
+		}(i)
+	}
+
+	wg.Wait()
+}
+```
+
+## Worker Pool
+
+Для обработки большого количества задач ограниченным числом воркеров.
+
+Есть общий канал задач, из которого читают несколько горутин-воркеров.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+type Job struct {
+	ID      int
+	Payload int
+}
+
+type Result struct {
+	JobID    int
+	WorkerID int
+	Value    int
+}
+
+// Пример: Worker Pool.
+// Идея: несколько рабочих горутин читают из общего канала задач.
+func worker(id int, jobs <-chan Job, results chan<- Result, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for job := range jobs {
+		time.Sleep(30 * time.Millisecond)
+		results <- Result{
+			JobID:    job.ID,
+			WorkerID: id,
+			Value:    job.Payload * job.Payload,
+		}
+	}
+}
+
+func main() {
+	const workerCount = 3
+	const jobCount = 8
+
+	jobs := make(chan Job)
+	results := make(chan Result)
+
+	var wg sync.WaitGroup
+	wg.Add(workerCount)
+	for i := 0; i < workerCount; i++ {
+		go worker(i+1, jobs, results, &wg)
+	}
+
+	go func() {
+		for i := 0; i < jobCount; i++ {
+			jobs <- Job{ID: i + 1, Payload: i + 2}
+		}
+		close(jobs)
+	}()
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for res := range results {
+		fmt.Printf("job=%d worker=%d value=%d\n", res.JobID, res.WorkerID, res.Value)
+	}
+}
+```
