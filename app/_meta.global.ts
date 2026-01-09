@@ -30,6 +30,7 @@ const GLOBAL: MetaRecord = {
       concurrency: '',
       'runtime-scheduler': '',
       'garbage-collector': '',
+      'concurrency-patterns': '',
     },
   },
   db: {
