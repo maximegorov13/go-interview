@@ -1,0 +1,157 @@
+# KISS — Keep It Simple, Stupid
+
+**KISS** — это принцип проектирования, который гласит: делай вещи проще, глупыш. Он утверждает, что большинство систем работают лучше всего, когда они остаются простыми, чем когда они усложнены. Каждую сложность, которая не оправдана, стоит устранить.
+
+## Расшифровка
+
+Keep It Simple, Stupid — дословно «Сделай это проще, глупыш». Это не оскорбление, а напоминание о том, что простое — это часто лучшее.
+Иногда добавляют: Keep It Short and Simple (сделай коротко и просто) — тоже версия, но оригинальная фраза — "Keep It Simple, Stupid".
+
+## Смысл принципа
+
+Код, архитектура, интерфейс, бизнес-логика — всё должно быть максимально простым, насколько это возможно без потери функциональности. Чем проще система, тем легче её понимать, поддерживать, тестировать и развивать.
+
+## Почему это важно
+
+1. Читаемость — простой код легче читать и понимать.
+2. Поддержка — проще чинить и обновлять.
+3. Тестирование — проще писать и отлаживать тесты.
+4. Меньше багов — меньше сложности = меньше мест, где можно ошибиться.
+5. Быстрее разработка — не нужно изобретать велосипеды, можно использовать простые решения.
+
+## Примеры на Go
+
+### Пример 1
+
+Плохо — излишне усложнённый код
+
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+type ComplexCalculator struct {
+	operations map[string]func(a, b int) int
+}
+
+func NewComplexCalculator() *ComplexCalculator {
+	return &ComplexCalculator{
+		operations: map[string]func(a, b int) int{
+			"add": func(a, b int) int { return a + b },
+			"sub": func(a, b int) int { return a - b },
+		},
+	}
+}
+
+func (c *ComplexCalculator) Execute(op string, a, b int) (int, error) {
+	fn, ok := c.operations[op]
+	if !ok {
+		return 0, errors.New("unknown operation")
+	}
+	return fn(a, b), nil
+}
+
+func main() {
+	calc := NewComplexCalculator()
+	result, _ := calc.Execute("add", 5, 3)
+	fmt.Println(result)
+}
+```
+
+Хорошо — простое решение
+
+```go
+package main
+
+import "fmt"
+
+func add(a, b int) int {
+	return a + b
+}
+
+func main() {
+	result := add(5, 3)
+	fmt.Println(result)
+}
+```
+
+### Пример 2
+
+Плохо — избыточная архитектура
+
+```go
+package main
+
+import "fmt"
+
+type DataProcessor interface {
+	Process(data string) string
+}
+
+type ConcreteProcessor struct{}
+
+func (p ConcreteProcessor) Process(data string) string {
+	return data + " processed"
+}
+
+type ProcessorService struct {
+	processor DataProcessor
+}
+
+func (s ProcessorService) Handle(data string) string {
+	return s.processor.Process(data)
+}
+
+func main() {
+	service := ProcessorService{processor: ConcreteProcessor{}}
+	result := service.Handle("my data")
+	fmt.Println(result)
+}
+```
+
+Хорошо — простое решение
+
+```go
+package main
+
+import "fmt"
+
+func process(data string) string {
+	return data + " processed"
+}
+
+func main() {
+	result := process("my data")
+	fmt.Println(result)
+}
+```
+
+## KISS в архитектуре
+
+- Не создавай лишних слоёв, если можно обойтись без них.
+- Не используй микросервисы, если приложение можно сделать монолитом.
+- Не усложняй конфигурацию, если всё можно задать в одном файле.
+- Не создавай интерфейсы, если у тебя только одна реализация.
+
+## KISS vs. YAGNI
+
+`KISS` часто путают с `YAGNI` (You Aren't Gonna Need It), но это разные вещи:
+
+`KISS` — делай просто, не усложняй.
+
+`YAGNI` — не пиши код, который может понадобиться "когда-нибудь потом".
+Но они хорошо сочетаются: не усложняй (KISS) и не предугадывай (YAGNI).
+
+### Примеры на практике
+
+- Не используй 10 интерфейсов, если можно обойтись без них.
+- Не пиши сложные обёртки вокруг стандартной библиотеки.
+- Не усложняй логику ради "универсальности", если она не нужна.
+- Не используй сложные паттерны, если можно обойтись простыми.
+
+## Итог
+
+KISS — это призыв не усложнять то, что можно сделать просто. Простота — это не отсутствие функций, это отсутствие лишней сложности. Код должен быть настолько простым, насколько это возможно, но не проще (вдохновлённое Эйнштейном).

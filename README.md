@@ -14,7 +14,7 @@
   - [x] транзакции и уровни изоляции
   - [x] репликация, шардирование и партиционирование
   - [x] реляционные и нереляционные БД
-- [ ] Принципы: SOLID с примерами, KISS, DRY итд
+- [x] Принципы: SOLID с примерами, KISS, DRY итд
 - [ ] Networks, HTTP(S), REST, gRPS, IP, TCP, UDP
 - [ ] ОПП
 - [ ] Architecture/Microservice (ссылки на github по чистой архитектуре, Standard Go Project Layout)

@@ -1,0 +1,175 @@
+# YAGNI — You Aren’t Gonna Need It
+
+YAGNI — это принцип разработки, который гласит: «Вам это не понадобится». Он призывает не писать код, который может когда-нибудь понадобиться, но не нужен сейчас.
+
+## Расшифровка
+
+- You Aren’t Gonna Need It — «вам это не понадобится».
+- Впервые популяризован в рамках Extreme Programming (XP).
+
+## Смысл принципа
+
+Не добавляй функциональность, если она действительно нужна прямо сейчас. Не пытайся угадать будущие потребности и писать код «про запас».
+
+## Почему это важно
+
+1. Меньше кода → проще поддерживать, легче читать.
+2. Меньше времени на реализацию → фокус на текущих задачах.
+3. Меньше багов → нет кода, нет ошибок.
+4. Меньше техдолга → не придётся потом разбирать ненужные абстракции.
+5. Проще тестировать → меньше кода → меньше тестов.
+
+## Примеры на Go
+
+### Пример 1
+
+Плохо — добавляем лишнюю функциональность «на всякий случай»
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+// Слишком универсальный интерфейс, который никто не использует
+type AdvancedUser struct {
+	ID          int
+	Name        string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	LastLoginAt *time.Time
+	Role        string
+	Permissions []string
+	ExtraData   map[string]interface{}
+}
+
+func (u *AdvancedUser) UpdateName(newName string) {
+	u.Name = newName
+	u.UpdatedAt = time.Now()
+}
+
+func (u *AdvancedUser) UpdateRole(role string) {
+	u.Role = role
+	u.UpdatedAt = time.Now()
+}
+
+// Пока никто не вызывает этот метод
+func (u *AdvancedUser) UpdatePermissions(perms []string) {
+	u.Permissions = perms
+	u.UpdatedAt = time.Now()
+}
+
+func main() {
+	user := &AdvancedUser{
+		ID:        1,
+		Name:      "John",
+		CreatedAt: time.Now(),
+	}
+	fmt.Println(user)
+}
+```
+
+Хорошо — делаем только то, что нужно сейчас
+
+```go
+package main
+
+import "fmt"
+
+type User struct {
+	ID   int
+	Name string
+}
+
+func main() {
+	user := User{ID: 1, Name: "John"}
+	fmt.Println(user)
+}
+```
+
+### Пример 2
+
+Плохо — добавляем интерфейсы и абстракции «на будущее»
+
+```go
+package main
+
+import "fmt"
+
+type Database interface {
+	Save(obj interface{}) error
+	Load(id int) (interface{}, error)
+	Delete(id int) error
+}
+
+type MySQLDatabase struct{}
+
+func (m MySQLDatabase) Save(obj interface{}) error {
+	fmt.Println("Saving to MySQL")
+	return nil
+}
+
+func (m MySQLDatabase) Load(id int) (interface{}, error) {
+	fmt.Println("Loading from MySQL")
+	return "data", nil
+}
+
+func (m MySQLDatabase) Delete(id int) error {
+	fmt.Println("Deleting from MySQL")
+	return nil
+}
+
+type UserService struct {
+	db Database
+}
+
+func NewUserService(db Database) *UserService {
+	return &UserService{db: db}
+}
+
+func main() {
+	db := MySQLDatabase{}
+	svc := NewUserService(db)
+	svc.db.Save("user data")
+}
+```
+
+Хорошо — используем конкретную реализацию, если она одна
+
+```go
+package main
+
+import "fmt"
+
+type UserService struct {
+	db string // или конкретный тип
+}
+
+func (s *UserService) Save(data string) {
+	fmt.Println("Saving to DB:", data)
+}
+
+func main() {
+	svc := &UserService{}
+	svc.Save("user data")
+}
+```
+
+## YAGNI в архитектуре
+
+- Не создавай микросервисы, если можно обойтись монолитом.
+- Не создавай интерфейсы, если у тебя только одна реализация.
+- Не добавляй настройки и конфигурацию «на всякий случай».
+- Не пиши обобщённые вспомогательные функции, если они нужны только в одном месте.
+
+## YAGNI vs. DRY / KISS
+
+- DRY говорит: «Не дублируй».
+- KISS говорит: «Делай проще».
+- YAGNI говорит: «Не пиши лишнего».
+
+## Итог
+
+YAGNI — это призыв не предугадывать будущие потребности и не писать код, который не используется. Лучше писать минимально возможный код, решающий текущую задачу, и расширять его по мере необходимости.
