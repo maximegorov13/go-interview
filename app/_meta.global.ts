@@ -47,6 +47,14 @@ const GLOBAL: MetaRecord = {
     title: 'Общее',
     items: {
       networks: '',
+      principles: {
+        title: 'Принципы',
+        // eslint-disable-next-line
+        // @ts-expect-error
+        items: {
+          solid: '',
+        },
+      },
     },
   },
   tasks: {
