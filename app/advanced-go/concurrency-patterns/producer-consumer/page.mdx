@@ -1,0 +1,38 @@
+# Producer / Consumer
+
+
+Для разделения производства и потребления данных с буферизацией и асинхронной обработкой.
+
+Производитель пишет в канал, потребитель читает и обрабатывает.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+// Пример: producer-consumer через канал.
+// Идея: производитель отправляет задачи, потребитель обрабатывает по мере поступления.
+func producer(out chan<- int) {
+	defer close(out)
+	for i := 1; i <= 5; i++ {
+		out <- i
+	}
+}
+
+func consumer(in <-chan int) {
+	for v := range in {
+		time.Sleep(20 * time.Millisecond)
+		fmt.Println("processed", v)
+	}
+}
+
+func main() {
+	jobs := make(chan int)
+
+	go producer(jobs)
+	consumer(jobs)
+}
+```

@@ -1,0 +1,59 @@
+# Future/Promise
+
+
+Для запуска долгой операции в фоне, чтобы не блокировать основной поток, и получения результата позже.
+
+Мы создаем Future, который содержит канал результата. Фоновая горутина выполняет работу и кладет результат/ошибку, а Await извлекает его, когда он нужен.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+	"time"
+)
+
+type Result struct {
+	Value int
+	Err   error
+}
+
+type Future struct {
+	result chan Result
+}
+
+// Пример: Future/Promise.
+// Идея: запускаем вычисление в фоне и получаем результат позже.
+func AsyncSquare(n int) Future {
+	f := Future{result: make(chan Result, 1)}
+	go func() {
+		defer close(f.result)
+		time.Sleep(40 * time.Millisecond)
+		if n < 0 {
+			f.result <- Result{Err: errors.New("negative input")}
+			return
+		}
+		f.result <- Result{Value: n * n}
+	}()
+	return f
+}
+
+func (f Future) Await() Result {
+	return <-f.result
+}
+
+func main() {
+	future := AsyncSquare(7)
+
+	// Пока результат готовится, можно делать другую работу.
+	fmt.Println("doing other work")
+	res := future.Await()
+
+	if res.Err != nil {
+		fmt.Println("error:", res.Err)
+		return
+	}
+	fmt.Println("result:", res.Value)
+}
+```

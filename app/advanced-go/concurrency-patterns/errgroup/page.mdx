@@ -1,0 +1,49 @@
+# errgroup
+
+
+Для запуска группы задач с общей отменой при первой ошибке.
+
+errgroup.WithContext отменяет контекст при любой ошибке.
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"golang.org/x/sync/errgroup"
+)
+
+// Пример: errgroup для запуска задач с общей отменой при ошибке.
+// Идея: первая ошибка отменяет контекст всей группы.
+func main() {
+	ctx := context.Background()
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		time.Sleep(20 * time.Millisecond)
+		return nil
+	})
+
+	g.Go(func() error {
+		time.Sleep(30 * time.Millisecond)
+		return errors.New("boom")
+	})
+
+	g.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(80 * time.Millisecond):
+			return nil
+		}
+	})
+
+	if err := g.Wait(); err != nil {
+		fmt.Println("error:", err)
+	}
+}
+```

@@ -1,0 +1,75 @@
+# Fan-In / Fan-Out
+
+
+Fan-out распараллеливает работу, fan-in собирает результаты обратно в один поток.
+
+Мы распределяем вход по нескольким воркерам (fan-out), затем объединяем их выходы (fan-in).
+
+```go showLineNumbers filename="main.go"
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+// Пример: Fan-out + Fan-in.
+// Идея: fan-out распределяет работу по нескольким воркерам, fan-in собирает результат.
+func generator(nums ...int) <-chan int {
+	out := make(chan int)
+	go func() {
+		for _, n := range nums {
+			out <- n
+		}
+		close(out)
+	}()
+	return out
+}
+
+func fanOut(in <-chan int, workers int) []<-chan int {
+	outs := make([]<-chan int, 0, workers)
+	for i := 0; i < workers; i++ {
+		out := make(chan int)
+		outs = append(outs, out)
+		go func(ch chan int) {
+			for n := range in {
+				ch <- n * n
+			}
+			close(ch)
+		}(out)
+	}
+	return outs
+}
+
+func fanIn(chans ...<-chan int) <-chan int {
+	out := make(chan int)
+	var wg sync.WaitGroup
+
+	wg.Add(len(chans))
+	for _, ch := range chans {
+		go func(c <-chan int) {
+			defer wg.Done()
+			for v := range c {
+				out <- v
+			}
+		}(ch)
+	}
+
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+
+	return out
+}
+
+func main() {
+	source := generator(1, 2, 3, 4, 5)
+	workers := fanOut(source, 3)
+	merged := fanIn(workers...)
+
+	for v := range merged {
+		fmt.Println(v)
+	}
+}
+```
