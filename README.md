@@ -20,8 +20,8 @@
 - [ ] Architecture/Microservice (ссылки на github по чистой архитектуре, Standard Go Project Layout)
 - [ ] Git (можно выписать основные команды, модель ветвления ссылка habr можно картинку взять и кратко описать)
 - [ ] Kafka, RabbitMQ (в целом про брокеры)
-- [ ] Balancer, Rate Limit, Circuit Breaker, Мониторинг, Логирование, Метрики, Prometheus, Grafana, Трассировка
-- [ ] Тестирование
+- [x] Balancer, Rate Limit, Circuit Breaker, Мониторинг, Логирование, Метрики, Prometheus, Grafana, Трассировка
+- [x] Тестирование
 - [x] Docker
 - [x] K8s
 - [x] Паттерны конкуретности (Fan-In, Fan-Out, Pipeline итд) - Можно еще посмотреть
