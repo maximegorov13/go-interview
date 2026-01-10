@@ -48,6 +48,8 @@ const GLOBAL: MetaRecord = {
     title: 'Общее',
     items: {
       networks: '',
+      docker: '',
+      k8s: '',
     },
   },
   tasks: {
