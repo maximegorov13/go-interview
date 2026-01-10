@@ -149,7 +149,7 @@ PostgreSQL использует **MVCC** (Multi-Version Concurrency Control) —
 | `ROLLBACK TO savepoint`               | Откат до точки            |
 | `SET TRANSACTION ISOLATION LEVEL ...` | Установка уровня изоляции |
 
-### Советы и особенности
+## Советы и особенности
 
 - PostgreSQL по умолчанию использует уровень изоляции `READ COMMITTED`.
 - Уровень `SERIALIZABLE` может привести к `Serialization Failure`, особенно при высокой нагрузке.
