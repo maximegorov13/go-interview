@@ -1,0 +1,179 @@
+# DRY — Don’t Repeat Yourself
+
+DRY — это принцип разработки программного обеспечения, который гласит: **не повторяйся**. Его цель — минимизировать дублирование кода и централизовать логику в одном месте.
+
+## Расшифровка
+
+- Don’t Repeat Yourself — «не повторяйся».
+
+## Смысл принципа
+
+Каждая часть знаний (логики, данных, вычислений) должна иметь единственный, однозначный и авторитетный представитель в системе. Если ты видишь, что одна и та же логика встречается в нескольких местах, значит, её нужно вынести в отдельную функцию, константу, структуру или модуль.
+
+## Почему это важно
+
+1. Поддержка кода — изменение логики нужно вносить только в одном месте.
+2. Читаемость — код становится понятнее, когда логика не размазана.
+3. Безопасность — меньше шансов забыть поправить одну из копий.
+4. Легче тестировать — тестируешь один раз, а не в каждом месте.
+5. Быстрее разрабатывать — можно переиспользовать готовые решения.
+
+## Примеры на Go
+
+### Пример 1
+
+Плохо — дублирование кода
+
+```go
+package main
+
+import "fmt"
+
+func getUserAge(name string, birthYear int) int {
+	currentYear := 2026 // дублируется ниже
+	return currentYear - birthYear
+}
+
+func getCarAge(model string, year int) int {
+	currentYear := 2026 // дублируется выше
+	return currentYear - year
+}
+
+func main() {
+	userAge := getUserAge("Alice", 1990)
+	carAge := getCarAge("Toyota", 2020)
+	fmt.Printf("User age: %d, Car age: %d\n", userAge, carAge)
+}
+```
+
+Хорошо — вынесено в константу и общую функцию
+
+```go
+package main
+
+import "fmt"
+
+const CurrentYear = 2026
+
+func getAge(year int) int {
+	return CurrentYear - year
+}
+
+func getUserAge(birthYear int) int {
+	return getAge(birthYear)
+}
+
+func getCarAge(year int) int {
+	return getAge(year)
+}
+
+func main() {
+	userAge := getUserAge(1990)
+	carAge := getCarAge(2020)
+	fmt.Printf("User age: %d, Car age: %d\n", userAge, carAge)
+}
+```
+
+### Пример 2
+
+Плохо — дублирование валидации
+
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+func validateEmail(email string) error {
+	if len(email) == 0 {
+		return errors.New("email cannot be empty")
+	}
+	if len(email) > 100 {
+		return errors.New("email too long")
+	}
+	if email[0] == '@' {
+		return errors.New("email must not start with @")
+	}
+	return nil
+}
+
+func validateUsername(username string) error {
+	if len(username) == 0 {
+		return errors.New("username cannot be empty") // дубликат
+	}
+	if len(username) > 100 {
+		return errors.New("username too long") // дубликат
+	}
+	if username[0] == '@' {
+		return errors.New("username must not start with @") // дубликат
+	}
+	return nil
+}
+
+func main() {
+	emailErr := validateEmail("@invalid")
+	usernameErr := validateUsername("@invalid")
+	fmt.Println(emailErr, usernameErr)
+}
+```
+
+Хорошо — вынесена общая логика
+
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
+func validateField(value, name string, maxLength int) error {
+	if len(value) == 0 {
+		return errors.New(name + " cannot be empty")
+	}
+	if len(value) > maxLength {
+		return errors.New(name + " too long")
+	}
+	if strings.HasPrefix(value, "@") {
+		return errors.New(name + " must not start with @")
+	}
+	return nil
+}
+
+func validateEmail(email string) error {
+	return validateField(email, "email", 100)
+}
+
+func validateUsername(username string) error {
+	return validateField(username, "username", 50)
+}
+
+func main() {
+	emailErr := validateEmail("@invalid")
+	usernameErr := validateUsername("@invalid")
+	fmt.Println(emailErr, usernameErr)
+}
+```
+
+## DRY в архитектуре
+
+- Не дублируй конфигурацию (настройки, URL, пути).
+- Выноси общие структуры в shared-пакеты.
+- Используй вспомогательные функции для общих операций (например, логирование, форматирование, валидация).
+- Используй базовые структуры (embedded struct), чтобы не повторять поля.
+
+## DRY vs. KISS
+
+DRY и KISS могут иногда конфликтовать:
+
+- DRY говорит: «Вынеси это в функцию».
+- KISS говорит: «Не усложняй».
+
+Но они не противоречат друг другу, если подходить с умом: делай просто, но не дублируй.
+
+## Итог
+
+DRY — это призыв не дублировать логику. Если ты видишь, что один и тот же кусок кода встречается дважды — пора вынести его в отдельное место. Это делает код чище, безопаснее и удобнее в поддержке.
