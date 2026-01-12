@@ -47,6 +47,7 @@ const GLOBAL: MetaRecord = {
   common: {
     title: 'Общее',
     items: {
+      git: '',
       networks: '',
       testing: '',
       resilience: '',
