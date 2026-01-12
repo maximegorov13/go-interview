@@ -15,11 +15,11 @@
   - [x] репликация, шардирование и партиционирование
   - [x] реляционные и нереляционные БД
 - [x] Принципы: SOLID с примерами, KISS, DRY итд
-- [ ] Networks, HTTP(S), REST, gRPS, IP, TCP, UDP
+- [x] Networks, HTTP(S), REST, gRPS, IP, TCP, UDP
 - [ ] ОПП
 - [ ] Architecture/Microservice (ссылки на github по чистой архитектуре, Standard Go Project Layout)
 - [ ] Git (можно выписать основные команды, модель ветвления ссылка habr можно картинку взять и кратко описать)
-- [ ] Kafka, RabbitMQ (в целом про брокеры)
+- [x] Kafka, RabbitMQ (в целом про брокеры)
 - [x] Balancer, Rate Limit, Circuit Breaker, Мониторинг, Логирование, Метрики, Prometheus, Grafana, Трассировка
 - [x] Тестирование
 - [x] Docker

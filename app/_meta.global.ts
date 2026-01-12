@@ -52,6 +52,7 @@ const GLOBAL: MetaRecord = {
       resilience: '',
       docker: '',
       k8s: '',
+      kafka: '',
       principles: {
         title: 'Принципы',
       },
