@@ -76,8 +76,154 @@
 - **`git submodule add <repo_url>`** — Добавляет подмодуль в проект.
 - **`git submodule update --init --recursive`** — Инициализирует и обновляет подмодули.
 
-## Модель ветвления
+## Модель ветвления Gitflow
 
 [Удачная модель ветвления для Git](https://habr.com/ru/articles/106912/)
 
-![Модель ветвления для Git](/images/git/branching_model.png)
+![Gitflow](/images/git/gitflow.png)
+
+### Этапы (по Gitflow)
+
+- **`master`** — стабильные релизы, каждый коммит соответствует версии.
+- **`develop`** — основная ветка разработки, интеграция новых изменений.
+- **`feature/*`** — разработка отдельных фич от `develop`, после готовности слияние обратно.
+- **`release/*`** — подготовка релиза: только багфиксы, метаданные, версия; затем слияние в `master` и `develop`.
+- **`hotfix/*`** — срочные исправления от `master` для продакшена; затем слияние в `master` и `develop`.
+
+![Главные ветви master и develop](/images/git/main_branches.png)
+
+### Feature branch: создание ветки
+
+Ответвление новой фичи от `develop`.
+
+![Ветви функциональностей](/images/git/feature_branches.png)
+
+```shell
+$ git checkout -b myfeature develop
+Switched to a new branch "myfeature"
+```
+
+### Feature branch: слияние в develop
+
+Возврат готовой фичи в основную ветку разработки.
+
+```shell
+$ git checkout develop
+Switched to branch 'develop'
+$ git merge --no-ff myfeature
+Updating ea1b82a..05e9557
+(Отчёт об изменениях)
+$ git branch -d myfeature
+Deleted branch myfeature (was 05e9557).
+$ git push origin develop
+```
+
+![Слияние с --no-ff](/images/git/no_ff_merge.png)
+
+### Release branch: создание ветки
+
+Ответвление релиза от `develop` и фиксация версии.
+
+```shell
+$ git checkout -b release-1.2 develop
+Switched to a new branch "release-1.2"
+$ ./bump-version.sh 1.2
+Files modified successfully, version bumped to 1.2.
+$ git commit -a -m "Bumped version number to 1.2"
+[release-1.2 74d9424] Bumped version number to 1.2
+1 files changed, 1 insertions(+), 1 deletions(-)
+```
+
+### Release branch: выпуск релиза
+
+Слияние в `master` и тегирование версии.
+
+```shell
+$ git checkout master
+Switched to branch 'master'
+$ git merge --no-ff release-1.2
+Merge made by recursive.
+(Отчёт об изменениях)
+$ git tag -a 1.2
+```
+
+### Release branch: возврат изменений в develop
+
+Перенос релизных правок обратно в `develop`.
+
+```shell
+$ git checkout develop
+Switched to branch 'develop'
+$ git merge --no-ff release-1.2
+Merge made by recursive.
+(Отчёт об изменениях)
+```
+
+### Release branch: удаление ветки
+
+Очистка завершённой ветки релиза.
+
+```shell
+$ git branch -d release-1.2
+Deleted branch release-1.2 (was ff452fe).
+```
+
+### Hotfix branch: создание ветки
+
+Ответвление срочного исправления от `master`.
+
+![Ветви исправлений](/images/git/hotfix_branches.png)
+
+```shell
+$ git checkout -b hotfix-1.2.1 master
+Switched to a new branch "hotfix-1.2.1"
+$ ./bump-version.sh 1.2.1
+Files modified successfully, version bumped to 1.2.1.
+$ git commit -a -m "Bumped version number to 1.2.1"
+[hotfix-1.2.1 41e61bb] Bumped version number to 1.2.1
+1 files changed, 1 insertions(+), 1 deletions(-)
+```
+
+### Hotfix branch: фиксация исправления
+
+Коммит правки в ветке исправления.
+
+```shell
+$ git commit -m "Fixed severe production problem"
+[hotfix-1.2.1 abbe5d6] Fixed severe production problem
+5 files changed, 32 insertions(+), 17 deletions(-)
+```
+
+### Hotfix branch: выпуск исправления
+
+Слияние в `master` и тегирование патча.
+
+```shell
+$ git checkout master
+Switched to branch 'master'
+$ git merge --no-ff hotfix-1.2.1
+Merge made by recursive.
+(Отчёт об изменениях)
+$ git tag -a 1.2.1
+```
+
+### Hotfix branch: возврат изменений в develop
+
+Перенос исправлений в ветку разработки.
+
+```shell
+$ git checkout develop
+Switched to branch 'develop'
+$ git merge --no-ff hotfix-1.2.1
+Merge made by recursive.
+(Отчёт об изменениях)
+```
+
+### Hotfix branch: удаление ветки
+
+Очистка завершённой ветки исправления.
+
+```shell
+$ git branch -d hotfix-1.2.1
+Deleted branch hotfix-1.2.1 (was abbe5d6).
+```
